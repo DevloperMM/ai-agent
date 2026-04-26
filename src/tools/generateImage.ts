@@ -1,9 +1,10 @@
+import 'dotenv/config'
+
 import type { ToolFn } from '../../types'
 import { z } from 'zod'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'url'
 import path from 'path'
-import { huggingFaceAI } from '../ai'
 
 export const generateImageToolDefinition = {
   name: 'generate_image',
@@ -19,24 +20,30 @@ export const generateImageToolDefinition = {
 type Args = z.infer<typeof generateImageToolDefinition.parameters>
 
 export const generateImage: ToolFn<Args, string> = async ({ toolArgs }) => {
-  // const result = (await huggingFaceAI.textToImage({
-  //   provider: 'fal-ai',
-  //   model: 'black-forest-labs/FLUX.1-dev',
-  //   inputs: toolArgs.prompt,
-  //   parameters: { num_inference_steps: 5 },
-  // })) as unknown as Blob
-
-  const result = await fetch('https://picsum.photos/500/500')
-  const url = result.url
-
-  const buffer = Buffer.from(await result.arrayBuffer())
-
   const __dirname = path.dirname(fileURLToPath(import.meta.url))
   const IMAGES_DIR = path.join(__dirname, '../../images')
+  mkdirSync(IMAGES_DIR, { recursive: true })
 
-  await mkdir(IMAGES_DIR, { recursive: true })
+  const url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/black-forest-labs/flux-1-schnell`
 
-  await writeFile(path.join(IMAGES_DIR, `image-${Date.now()}.jpg`), buffer)
+  const result = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt: toolArgs.prompt,
+    }),
+  })
 
-  return url
+  const data = (await result.json()) as any
+  const base64 = data.result.image
+
+  writeFileSync(
+    path.join(IMAGES_DIR, `image-${Date.now()}.jpg`),
+    Buffer.from(base64, 'base64'),
+  )
+
+  return 'Check out the images folder to see the image'
 }
