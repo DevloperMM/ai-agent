@@ -9,7 +9,7 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
-results.json
+
 # Caches 
 
 .cache
@@ -175,5 +175,8 @@ dist
 .DS_Store
 .env
 
+# Custom files
+results.json
+notes.md
 db.json
 images

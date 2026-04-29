@@ -57,6 +57,7 @@ export const logMessage = (message: AIMessage) => {
   }
 }
 
+// TODO: Improve tool approval flow, system prompt and manage the messages more effectively
 export const askForApproval = async (toolName: string): Promise<boolean> => {
   const rl = createInterface({
     input: process.stdin,

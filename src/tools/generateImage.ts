@@ -9,7 +9,7 @@ import path from 'path'
 export const generateImageToolDefinition = {
   name: 'generate_image',
   description:
-    'Generate an image when the user request can be visualized (scenes, objects, people, designs, or abstract ideas). Always use for requests like draw, create, show, imagine, or photo/picture of. Expand the input into a detailed visual prompt with style, lighting, and setting. Avoid for non-visual tasks.',
+    'Generate an image when the user request can be visualized (scenes, objects, people, designs, or abstract ideas). Always use for requests like draw, create, show, imagine, or photo/picture of. Expand the input into a detailed visual prompt with style, lighting, and setting. Avoid for non-visual tasks. Taking a photo also means the same as generating image for this tool.',
   parameters: z.object({
     prompt: z
       .string()
