@@ -1,6 +1,7 @@
 import ora from 'ora'
 import { createInterface } from 'node:readline/promises'
 import type { AIMessage } from '../types'
+import { generateImageToolDefinition } from './tools/generateImage'
 
 export const showLoader = (text: string) => {
   const spinner = ora({
@@ -45,6 +46,10 @@ export const logMessage = (message: AIMessage) => {
       message.tool_calls.forEach((tool: any) => {
         console.log(`\n${color}[ASSISTANT]${reset}`)
         console.log(`${tool.function.name}\n`)
+
+        if (tool.function.name === generateImageToolDefinition.name) {
+          console.log('\nDo you approve generating an image? (yes/no)\n')
+        }
       })
       return
     }
@@ -53,29 +58,6 @@ export const logMessage = (message: AIMessage) => {
     if (message.content) {
       console.log(`\n${color}[ASSISTANT]${reset}`)
       console.log(`${message.content}\n`)
-    }
-  }
-}
-
-// TODO: Improve tool approval flow, system prompt and manage the messages more effectively
-export const askForApproval = async (toolName: string): Promise<boolean> => {
-  const rl = createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  })
-
-  while (true) {
-    const answer = (
-      await rl.question(
-        `\nDo you want to allow the tool '${toolName}' to run? (y/n): `,
-      )
-    )
-      .trim()
-      .toLowerCase()
-
-    if (answer === 'y' || answer === 'n') {
-      rl.close()
-      return answer === 'y'
     }
   }
 }

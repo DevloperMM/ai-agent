@@ -1,10 +1,58 @@
 import { addMessages, getMessages, saveToolResponse } from './memory'
-import { runLLM } from './llm'
-import { showLoader, logMessage, askForApproval } from './ui'
+import { runApprovalCheck, runLLM } from './llm'
+import { showLoader, logMessage } from './ui'
 import { runTool } from './toolRunner'
+import { generateImageToolDefinition } from './tools/generateImage'
+import type { AIMessage } from '../types'
+
+const handleImageApprovalFlow = async (
+  history: AIMessage[],
+  userMessage: string,
+) => {
+  const lastMessage = history[history.length - 1] as any
+  const toolCall = lastMessage?.tool_calls?.[0]
+
+  if (
+    !toolCall ||
+    toolCall.function.name !== generateImageToolDefinition.name
+  ) {
+    return false
+  }
+
+  const loader = showLoader('Processing approval...')
+  const approved = await runApprovalCheck(userMessage)
+
+  if (approved) {
+    loader.update(`executing tool: ${toolCall.function.name}`)
+    const toolResponse = await runTool(toolCall, userMessage)
+
+    loader.update(`done: ${toolCall.function.name}`)
+    await saveToolResponse(toolCall.id, toolResponse)
+  } else {
+    await saveToolResponse(
+      toolCall.id,
+      'User did not approve image generation at this time.',
+    )
+  }
+
+  loader.stop()
+
+  return true
+}
 
 export const runAgent = async (userMessage: string, tools: any[]) => {
-  await addMessages([{ role: 'user', content: userMessage }])
+  const history = await getMessages()
+
+  const isImageApproval = await handleImageApprovalFlow(history, userMessage)
+  /**
+   * If the tool call is generateImage, flow will be handled in above fn itself
+   * and will be respond back from there only
+   * and no code from now onward in this fn will run
+   */
+
+  if (!isImageApproval) {
+    await addMessages([{ role: 'user', content: userMessage }])
+  }
 
   let loader = showLoader('🤔')
 
@@ -20,31 +68,26 @@ export const runAgent = async (userMessage: string, tools: any[]) => {
       return getMessages()
     }
 
+    /**
+     * loader for execute and done must remain here
+     * to ensure the same behaviour upon tool approval
+     * even if the tool is not generateImage
+     */
+
     if (response.tool_calls) {
-      const toolCall = response.tool_calls[0]
+      const toolCall = response.tool_calls[0] as any
       logMessage(response)
+      loader.update(`executing: ${toolCall.function.name}`)
 
-      if (toolCall.type === 'function') {
+      if (toolCall.function.name === generateImageToolDefinition.name) {
+        loader.update('Needs user approval')
         loader.stop()
-
-        const isApproved = await askForApproval(toolCall.function.name)
-
-        if (isApproved) {
-          const toolLoader = showLoader(`executing: ${toolCall.function.name}`)
-
-          const toolResponse = await runTool(toolCall, userMessage)
-          await saveToolResponse(toolCall.id, toolResponse)
-
-          toolLoader.succeed(`done: ${toolCall.function.name}`)
-        } else {
-          await saveToolResponse(
-            toolCall.id,
-            'User denied the execution of tool which was requested by assistant for completing the task',
-          )
-        }
-
-        loader = showLoader('🤔')
+        return getMessages()
       }
+
+      const toolResponse = await runTool(toolCall, userMessage)
+      await saveToolResponse(toolCall.id, toolResponse)
+      loader.update(`done ${toolCall.function.name}`)
     }
   }
 }
