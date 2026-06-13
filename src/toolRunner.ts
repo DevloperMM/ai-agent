@@ -8,7 +8,7 @@ import { dadJoke, dadJokeToolDefinition } from './tools/dadJoke'
 import { movieSearch, movieSearchDefinition } from './tools/movieSearch'
 
 export const runTool = async (
-  toolCall: OpenAI.Chat.Completions.ChatCompletionMessageFunctionToolCall,
+  toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall,
   userMessage: string,
 ) => {
   const input = {

@@ -1,5 +1,4 @@
 import ora from 'ora'
-import { createInterface } from 'node:readline/promises'
 import type { AIMessage } from '../types'
 import { generateImageToolDefinition } from './tools/generateImage'
 
